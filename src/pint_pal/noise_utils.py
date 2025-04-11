@@ -2,9 +2,9 @@ import numpy as np, os, json, itertools, time
 from astropy import log
 from astropy.time import Time
 
-from enterprise.pulsar import Pulsar
-from enterprise_extensions import models, model_utils
-from enterprise_extensions import sampler as ee_sampler
+#from enterprise.pulsar import Pulsar
+#from enterprise_extensions import models, model_utils
+#from enterprise_extensions import sampler as ee_sampler
 import corner
 
 import pint.models as pm
@@ -15,10 +15,10 @@ import matplotlib.pyplot as pl
 
 import la_forge.core as co
 
-from enterprise_extensions.sampler import group_from_params, get_parameter_groups
-from enterprise_extensions import model_utils
-from enterprise_extensions.empirical_distr import (EmpiricalDistribution1D,
-                                                   EmpiricalDistribution2D)
+#from enterprise_extensions.sampler import group_from_params, get_parameter_groups
+#from enterprise_extensions import model_utils
+#from enterprise_extensions.empirical_distr import (EmpiricalDistribution1D,
+#                                                   EmpiricalDistribution2D)
 
 
 def setup_sampling_groups(pta,
