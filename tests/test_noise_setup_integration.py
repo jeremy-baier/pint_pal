@@ -17,15 +17,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from enterprise.pulsar import Pulsar
 
+import pint_pal.discovery_utils as du
 import pint_pal.noise_utils as nu
 from pint_pal.timingconfiguration import TimingConfiguration
-
-try:
-    import pint_pal.discovery_utils as du
-    _DU_IMPORT_ERROR = None
-except Exception as exc:  # pragma: no cover - environment dependent
-    du = None
-    _DU_IMPORT_ERROR = exc
 
 
 @pytest.fixture(scope="module")
@@ -59,8 +53,6 @@ def real_pint_model():
 @pytest.fixture(autouse=True)
 def _compat_log_warn(monkeypatch):
     """Compatibility shim for older/newer logger API differences."""
-    if du is None:
-        return
     if not hasattr(du.log, "warn"):
         monkeypatch.setattr(du.log, "warn", du.log.warning, raising=False)
 
@@ -92,8 +84,6 @@ def _enterprise_pulsar_from_real_data(real_model_toas):
 
 def _assert_discovery_likelihood_builds(psr, model_kwargs):
     """Assert discovery likelihood setup succeeds and exposes log-likelihood."""
-    if du is None:
-        pytest.skip(f"discovery_utils import unavailable in this environment: {_DU_IMPORT_ERROR}")
     pulsar_likelihood = du.make_single_pulsar_noise_likelihood_discovery(
         psr=psr,
         noise_dict={},
