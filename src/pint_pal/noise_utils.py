@@ -687,6 +687,73 @@ def convert_to_RNAMP(value):
     return (86400.0 * 365.24 * 1e6) / (2.0 * np.pi * np.sqrt(3.0)) * 10**value
 
 
+def _set_component_param_value(component, param_name, value):
+    """Set a PINT component parameter if present."""
+    if value is None or not hasattr(component, param_name):
+        return
+
+    par = getattr(component, param_name)
+    try:
+        par.quantity = value
+    except Exception:
+        par.value = value
+
+
+def _translate_logfreq_kwargs(noise_kwargs):
+    """Translate discovery-style log-frequency kwargs to PINT log-basis knobs.
+
+    Returns
+    -------
+    tuple
+        ``(nlog, flog_factor, tspan_year)`` with None for unavailable values.
+    """
+    nlog = noise_kwargs.get("nlog", noise_kwargs.get("Nfreqs_log", None))
+    if nlog is not None:
+        nlog = int(nlog)
+    if nlog is not None and nlog <= 0:
+        return None, None, None
+
+    logmode = noise_kwargs.get("logmode", None)
+    if (logmode is not None) and (int(logmode) != 0):
+        log.warning(
+            "PINT log Fourier support uses sub-1/Tspan log bins (logmode=0 style); "
+            f"received logmode={logmode}."
+        )
+
+    flog_factor = noise_kwargs.get("flog_factor", noise_kwargs.get("log_factor", None))
+    if flog_factor is None:
+        f_min_frac = noise_kwargs.get("f_min_frac", None)
+        if (f_min_frac is not None) and (nlog is not None) and (nlog > 0):
+            f_min_frac = float(f_min_frac)
+            if 0.0 < f_min_frac < 1.0:
+                flog_factor = (1.0 / f_min_frac) ** (1.0 / nlog)
+            else:
+                log.warning(
+                    f"Ignoring f_min_frac={f_min_frac} for log-frequency mapping; expected 0 < f_min_frac < 1."
+                )
+    if flog_factor is None and nlog is not None:
+        flog_factor = 2.0
+
+    tspan = noise_kwargs.get("tspan", None)
+    tspan_year = None
+    if tspan is not None:
+        tspan_year = float(tspan) / (86400.0 * 365.25)
+
+    return nlog, flog_factor, tspan_year
+
+
+def _apply_pl_component_logfreq_settings(component, noise_kwargs, flog_name, factor_name, tspan_name=None):
+    """Apply log-spaced Fourier-basis settings to a PINT PL* noise component."""
+    nlog, flog_factor, tspan_year = _translate_logfreq_kwargs(noise_kwargs)
+    if nlog is None:
+        return
+
+    _set_component_param_value(component, flog_name, nlog)
+    _set_component_param_value(component, factor_name, flog_factor)
+    if tspan_name is not None:
+        _set_component_param_value(component, tspan_name, tspan_year)
+
+
 def format_chain_dir(
     root_dir: str,
     model: pm.timing_model.TimingModel,
@@ -725,6 +792,10 @@ def add_noise_to_model(
     model: PINT (or tempo2) timing model
     noise_dict: Dictionary containing noise parameters.
     model_kwargs: dictionary of noise model settings from tc.config['noise_run']['model']; Default: {}
+        For each PL noise block (e.g., ``red_noise``, ``dm_noise``, ``chromatic_noise``,
+        ``solar_wind``), ``nlog`` enables log-spaced Fourier bins below 1/Tspan in
+        the PINT model. Optional ``f_min_frac`` is translated to the corresponding
+        ``*FLOG_FACTOR`` and ``tspan`` (seconds) is translated to ``*TSPAN`` where supported.
     using_wideband: Flag to toggle between narrowband and wideband datasets; Default: False
     base_dir: directory containing {psr}_nb and {psr}_wb chains directories; if None, will
         check for results in the current working directory './'.
@@ -935,6 +1006,13 @@ def add_noise_to_model(
         rn_comp.TNREDAMP.quantity = noise_dict[psr_name + "_red_noise_log10_A"]
         rn_comp.TNREDGAM.quantity = noise_dict[psr_name + "_red_noise_gamma"]
         rn_comp.TNREDC.quantity = rn_kwargs.get('Nfreqs', 30)
+        _apply_pl_component_logfreq_settings(
+            rn_comp,
+            rn_kwargs,
+            flog_name="TNREDFLOG",
+            factor_name="TNREDFLOG_FACTOR",
+            tspan_name="TNREDTSPAN",
+        )
         # Add red noise to the timing model
         model.add_component(rn_comp, validate=True, force=True)
     else:
@@ -955,6 +1033,13 @@ def add_noise_to_model(
             dm_comp.TNDMGAM.quantity = noise_dict[psr_name + "_dm_gp_gamma"]
             ##### FIXMEEEEEEE : need to figure out some way to softcode this
             dm_comp.TNDMC.quantitity = dm_kwargs.get('Nfreqs', 100)
+            _apply_pl_component_logfreq_settings(
+                dm_comp,
+                dm_kwargs,
+                flog_name="TNDMFLOG",
+                factor_name="TNDMFLOG_FACTOR",
+                tspan_name="TNDMTSPAN",
+            )
             # Add red noise to the timing model
             model.add_component(dm_comp, validate=True, force=True)
         ###### FREE SPECTRAL (WaveX) DM NOISE ######
@@ -975,6 +1060,13 @@ def add_noise_to_model(
             chrom_comp.TNCMAMP.quantity = noise_dict[psr_name + "_chrom_gp_log10_A"]
             chrom_comp.TNCMGAM.quantity = noise_dict[psr_name + "_chrom_gp_gamma"]
             chrom_comp.TNCMC.quantitity = chrom_kwargs.get('Nfreqs', 100)
+            _apply_pl_component_logfreq_settings(
+                chrom_comp,
+                chrom_kwargs,
+                flog_name="TNCHROMFLOG" if hasattr(chrom_comp, "TNCHROMFLOG") else "TNCMFLOG",
+                factor_name="TNCHROMFLOG_FACTOR" if hasattr(chrom_comp, "TNCHROMFLOG_FACTOR") else "TNCMFLOG_FACTOR",
+                tspan_name="TNCHROMTSPAN" if hasattr(chrom_comp, "TNCHROMTSPAN") else "TNCMTSPAN",
+            )
             # Add red noise to the timing model
             model.add_component(chrom_comp, validate=True, force=True)
         ###### FREE SPECTRAL (WaveX) DM NOISE ######
@@ -1005,6 +1097,13 @@ def add_noise_to_model(
             sw_comp.TNSWGAM.frozen = True
             sw_comp.TNSWC.quantity = sw_kwargs.get('Nfreqs', 100)
             sw_comp.TNSWC.frozen = True
+            _apply_pl_component_logfreq_settings(
+                sw_comp,
+                sw_kwargs,
+                flog_name="TNSWFLOG",
+                factor_name="TNSWFLOG_FACTOR",
+                tspan_name=None,
+            )
             model.add_component(sw_comp, validate=False, force=True)
         elif f'{psr_name}_sw_gp_log10_rho' in sw_pars:
             raise NotImplementedError('Solar Wind Dispersion free spec GP not yet implemented')

@@ -77,8 +77,6 @@ def _select_fourier_basis(psr, Nfreqs, tspan, logmode, f_min, nlog, noise_type):
             return ds_solar.fourierbasis_solar_dm
     else:
         raise ValueError(f"Invalid nlog value in {noise_type} model. Must be a non-negative integer.")
-    
-
 
 
 def timing_model_block(
@@ -212,8 +210,9 @@ def red_noise_block(
         Default is ``"fourier"``.
     prior : str, optional
         Prior type or callable prior for the GP amplitude. Supported string
-        values are ``"powerlaw"``, ``"broken_powerlaw"``, and
-        ``"freespectrum"``. Default is ``"powerlaw"``.
+        values are ``"powerlaw"``, ``"powerlaw_cutoff"``,
+        ``"broken_powerlaw"``, and ``"freespectrum"``.
+        Default is ``"powerlaw"``.
     Nfreqs : int, optional
         Number of Fourier frequencies. Default is 100.
     logmode : int, optional
@@ -237,6 +236,8 @@ def red_noise_block(
     if basis == 'fourier':
         if prior == 'powerlaw':
             prior = ds.powerlaw
+        elif prior == 'powerlaw_cutoff':
+            prior = ds.powerlaw_cutoff
         elif prior == 'broken_powerlaw':
             prior = ds.broken_powerlaw
         elif prior == 'freespectrum':
@@ -244,7 +245,7 @@ def red_noise_block(
         elif callable(prior):
             pass # pass a callable prior
         else:
-            raise ValueError("Invalid *prior* specified for Fourier basis red noise. Try one of: ['powerlaw', 'broken_powerlaw', 'freespectrum']")
+            raise ValueError("Invalid *prior* specified for Fourier basis red noise. Try one of: ['powerlaw', 'powerlaw_cutoff', 'broken_powerlaw', 'freespectrum']")
 
         rn = ds.makegp_fourier(
             psr,
@@ -290,8 +291,9 @@ def dm_noise_block(
         Default is ``"fourier"``.
     prior : str, optional
         Prior type or callable prior for the GP amplitude. Supported string
-        values are ``"powerlaw"``, ``"broken_powerlaw"``, and
-        ``"freespectrum"``. Default is ``"powerlaw"``.
+        values are ``"powerlaw"``, ``"powerlaw_cutoff"``,
+        ``"broken_powerlaw"``, and ``"freespectrum"``.
+        Default is ``"powerlaw"``.
     Nfreqs : int, optional
         Number of Fourier frequencies. Default is 100.
     logmode : int, optional
@@ -316,6 +318,8 @@ def dm_noise_block(
     if basis == 'fourier':
         if prior == 'powerlaw':
             prior = ds.powerlaw
+        elif prior == 'powerlaw_cutoff':
+            prior = ds.powerlaw_cutoff
         elif prior == 'broken_powerlaw':
             prior = ds.broken_powerlaw
         elif prior == 'freespectrum':
@@ -323,7 +327,7 @@ def dm_noise_block(
         elif callable(prior):
             pass # pass a callable prior
         else:
-            raise ValueError("Invalid *prior* specified for Fourier basis DM noise. Try one of: ['powerlaw', 'broken_powerlaw', 'freespectrum']")
+            raise ValueError("Invalid *prior* specified for Fourier basis DM noise. Try one of: ['powerlaw', 'powerlaw_cutoff', 'broken_powerlaw', 'freespectrum']")
 
         dm_gp = ds.makegp_fourier(
             psr,
@@ -368,8 +372,9 @@ def chromatic_noise_block(
         Default is ``"fourier"``.
     prior : str, optional
         Prior type or callable prior for the GP amplitude. Supported string
-        values are ``"powerlaw"``, ``"broken_powerlaw"``, and
-        ``"freespectrum"``. Default is ``"powerlaw"``.
+        values are ``"powerlaw"``, ``"powerlaw_cutoff"``,
+        ``"broken_powerlaw"``, and ``"freespectrum"``.
+        Default is ``"powerlaw"``.
     Nfreqs : int, optional
         Number of Fourier frequencies. Default is 100.
     tspan : float, optional
@@ -398,6 +403,8 @@ def chromatic_noise_block(
     if basis == 'fourier':
         if prior == 'powerlaw':
             prior = ds.powerlaw
+        elif prior == 'powerlaw_cutoff':
+            prior = ds.powerlaw_cutoff
         elif prior == 'broken_powerlaw':
             prior = ds.broken_powerlaw
         elif prior == 'freespectrum':
@@ -405,7 +412,7 @@ def chromatic_noise_block(
         elif callable(prior):
             pass # pass a callable prior
         else:
-            raise ValueError("Invalid *prior* specified for Fourier basis chromatic noise. Try one of: ['powerlaw', 'broken_powerlaw', 'freespectrum']")
+            raise ValueError("Invalid *prior* specified for Fourier basis chromatic noise. Try one of: ['powerlaw', 'powerlaw_cutoff', 'broken_powerlaw', 'freespectrum']")
 
         chrom_gp = ds.makegp_fourier(
             psr,
@@ -455,7 +462,7 @@ def solar_wind_noise_block(
         Interpolation kind for the basis. Default is "linear". Only used for interpolation basis.
     prior : str, optional
         Prior type for the GP amplitude. For Fourier basis this is a PSD. For time domain it is a covariance function.
-        Fourier basis supports ["powerlaw"].
+        Fourier basis supports ["powerlaw", "powerlaw_cutoff", "broken_powerlaw", "freespectrum"].
         Time-domain interpolation basis supports ["ridge", "square_exponential", "quasi_periodic", "matern"].
         Default is "powerlaw".
     Nfreqs : int, optional
@@ -477,6 +484,8 @@ def solar_wind_noise_block(
     if basis == 'fourier':
         if prior == 'powerlaw':
             prior = ds.powerlaw
+        elif prior == 'powerlaw_cutoff':
+            prior = ds.powerlaw_cutoff
         elif prior == 'broken_powerlaw':
             prior = ds.broken_powerlaw
         elif prior == 'freespectrum':
@@ -484,7 +493,7 @@ def solar_wind_noise_block(
         elif callable(prior):
             pass # pass a callable prior
         else:
-            raise ValueError("Invalid *prior* specified for Fourier basis solar wind noise. Try one of: ['powerlaw', 'broken_powerlaw', 'freespectrum']")
+            raise ValueError("Invalid *prior* specified for Fourier basis solar wind noise. Try one of: ['powerlaw', 'powerlaw_cutoff', 'broken_powerlaw', 'freespectrum']")
 
         sw_gp = ds.makegp_fourier(
             psr,
