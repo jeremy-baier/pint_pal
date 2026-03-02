@@ -130,19 +130,26 @@ def white_noise_block(
         Whether to include EQUAD terms. Default is True.
     selection : Callable, optional
         Backend selection function. Default is discovery.selection_backend_flags.
+        `None` returns white noise with no selections.
 
     Returns
     -------
     Any
         Discovery white-noise block from ``ds.makenoise_measurement``.
     """
-    return ds.makenoise_measurement(
-        psr,
-        tnequad=tn_equad,
-        ecorr=include_ecorr,
-        selection=selection,
-        noisedict=noise_dict,
-    )
+    if selection is None:
+        return ds.makenoise_measurement_simple(
+            psr,
+            noisedict=noise_dict,
+        )
+    else:
+        return ds.makenoise_measurement(
+            psr,
+            tnequad=tn_equad,
+            ecorr=include_ecorr,
+            selection=selection,
+            noisedict=noise_dict,
+        )
 
 def gp_ecorr_block(
         psr: Any,
@@ -178,12 +185,18 @@ def gp_ecorr_block(
     Any
         Discovery GP ECORR block from ``ds.makegp_ecorr``.
     """
-    return ds.makegp_ecorr(
-        psr,
-        noisedict=noise_dict,
-        selection=selection,
-        gp_ecorr_name=gp_ecorr_name,
-        )
+    if selection is None:
+        return ds.makegp_ecorr_simple(
+            psr,
+            noisedict=noise_dict,
+            )
+    else:
+        return ds.makegp_ecorr(
+            psr,
+            noisedict=noise_dict,
+            selection=selection,
+            gp_ecorr_name=gp_ecorr_name,
+            )
 
 def red_noise_block(
         psr: Any,
