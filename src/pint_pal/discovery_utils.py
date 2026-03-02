@@ -242,6 +242,8 @@ def red_noise_block(
             prior = ds.broken_powerlaw
         elif prior == 'freespectrum':
             prior = ds.freespectrum
+        elif prior == 'powerlaw_cutoff':
+            prior = ds.powerlaw_cutoff
         elif callable(prior):
             pass # pass a callable prior
         else:
@@ -324,6 +326,8 @@ def dm_noise_block(
             prior = ds.broken_powerlaw
         elif prior == 'freespectrum':
             prior = ds.freespectrum
+        elif prior == 'powerlaw_cutoff':
+            prior = ds.powerlaw_cutoff
         elif callable(prior):
             pass # pass a callable prior
         else:
@@ -409,6 +413,8 @@ def chromatic_noise_block(
             prior = ds.broken_powerlaw
         elif prior == 'freespectrum':
             prior = ds.freespectrum
+        elif prior == 'powerlaw_cutoff':
+            prior = ds.powerlaw_cutoff
         elif callable(prior):
             pass # pass a callable prior
         else:
@@ -490,6 +496,8 @@ def solar_wind_noise_block(
             prior = ds.broken_powerlaw
         elif prior == 'freespectrum':
             prior = ds.freespectrum
+        elif prior == 'powerlaw_cutoff':
+            prior = ds.powerlaw_cutoff
         elif callable(prior):
             pass # pass a callable prior
         else:
@@ -511,19 +519,19 @@ def solar_wind_noise_block(
         if basis_nodes is None:
             basis_nodes = np.arange(psr.toas.min()/86400, psr.toas.max()/86400, interp_dt)
         # else basis nodes are provided by user.
-        td_basis, nodes = ds_solar.custom_blocked_interpolation_basis(
+        td_basis, nodes = ds.signals.custom_blocked_interpolation_basis(
             psr.toas,
             nodes=basis_nodes,
             kind=interp_kind,
         )
         if prior == 'ridge':
-            prior_kernel = ds_solar.ridge_kernel()
+            prior_kernel = ds.signals.ridge_kernel()
         elif prior == 'square_exponential':
-            prior_kernel = ds_solar.square_exponential_kernel()
+            prior_kernel = ds.signals.square_exponential_kernel()
         elif prior == 'quasi_periodic':
-            prior_kernel = ds_solar.quasi_periodic_kernel()
+            prior_kernel = ds.signals.quasi_periodic_kernel()
         elif prior == 'matern':
-            prior_kernel = ds_solar.matern_kernel()
+            prior_kernel = ds.signals.matern_kernel()
         elif prior == 'powerlaw':
             raise ValueError("Power-law prior is not supported for time domain solar wind noise. Must be in ['ridge', 'square_exponential', 'quasi_periodic', 'matern'].")
         else: 
