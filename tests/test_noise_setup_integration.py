@@ -17,9 +17,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from enterprise.pulsar import Pulsar
 
-import pint_pal.discovery_utils as du
 import pint_pal.noise_utils as nu
 from pint_pal.timingconfiguration import TimingConfiguration
+
+try:
+    import pint_pal.discovery_utils as du
+    _DU_IMPORT_ERROR = None
+except Exception as exc:  # pragma: no cover - environment dependent
+    du = None
+    _DU_IMPORT_ERROR = exc
 
 
 @pytest.fixture(scope="module")
@@ -53,6 +59,8 @@ def real_pint_model():
 @pytest.fixture(autouse=True)
 def _compat_log_warn(monkeypatch):
     """Compatibility shim for older/newer logger API differences."""
+    if du is None:
+        return
     if not hasattr(du.log, "warn"):
         monkeypatch.setattr(du.log, "warn", du.log.warning, raising=False)
 
@@ -84,6 +92,8 @@ def _enterprise_pulsar_from_real_data(real_model_toas):
 
 def _assert_discovery_likelihood_builds(psr, model_kwargs):
     """Assert discovery likelihood setup succeeds and exposes log-likelihood."""
+    if du is None:
+        pytest.skip(f"discovery_utils import unavailable in this environment: {_DU_IMPORT_ERROR}")
     pulsar_likelihood = du.make_single_pulsar_noise_likelihood_discovery(
         psr=psr,
         noise_dict={},
@@ -458,6 +468,52 @@ def test_add_noise_to_model_with_real_model_and_synthetic_noise(real_pint_model)
     assert float(rn.TNREDAMP.value) == pytest.approx(noise_dict[f"{psr}_red_noise_log10_A"])
     assert float(rn.TNREDGAM.value) == pytest.approx(noise_dict[f"{psr}_red_noise_gamma"])
     assert int(rn.TNREDC.value) == 12
+
+
+@pytest.mark.filterwarnings("ignore:PINT only supports 'T2CMETHOD IAU2000B'")
+def test_add_noise_to_model_maps_log_spaced_fourier_settings(real_pint_model):
+    """`model_kwargs` log-frequency knobs should map to PINT `*FLOG*` (and `*TSPAN`) parameters."""
+    model = deepcopy(real_pint_model)
+    psr = model.PSR.value
+
+    red_kwargs = {"Nfreqs": 12, "nlog": 3, "f_min_frac": 1 / 8, "tspan": 10 * 365.25 * 86400}
+    dm_kwargs = {"Nfreqs": 20, "nlog": 2, "f_min_frac": 1 / 4, "tspan": 8 * 365.25 * 86400}
+    sw_kwargs = {"Nfreqs": 9, "nlog": 4, "f_min_frac": 1 / 16}
+
+    noise_dict = _base_noise_dict(psr)
+    noise_dict.update(
+        {
+            f"{psr}_red_noise_log10_A": -15.3,
+            f"{psr}_red_noise_gamma": 4.2,
+            f"{psr}_dm_gp_log10_A": -13.6,
+            f"{psr}_dm_gp_gamma": 2.1,
+            f"{psr}_sw_gp_log10_A": -13.0,
+            f"{psr}_sw_gp_gamma": 2.6,
+        }
+    )
+
+    out = nu.add_noise_to_model(
+        model=model,
+        noise_dict=noise_dict,
+        model_kwargs={"red_noise": red_kwargs, "dm_noise": dm_kwargs, "solar_wind": sw_kwargs},
+        using_wideband=False,
+    )
+
+    assert out is model
+
+    rn = model.components["PLRedNoise"]
+    assert int(rn.TNREDFLOG.value) == 3
+    assert float(rn.TNREDFLOG_FACTOR.value) == pytest.approx(2.0)
+    assert float(rn.TNREDTSPAN.value) == pytest.approx(10.0)
+
+    dm = model.components["PLDMNoise"]
+    assert int(dm.TNDMFLOG.value) == 2
+    assert float(dm.TNDMFLOG_FACTOR.value) == pytest.approx(2.0)
+    assert float(dm.TNDMTSPAN.value) == pytest.approx(8.0)
+
+    sw = model.components["PLSWNoise"]
+    assert int(sw.TNSWFLOG.value) == 4
+    assert float(sw.TNSWFLOG_FACTOR.value) == pytest.approx(2.0)
 
 
 @pytest.mark.filterwarnings("ignore:PINT only supports 'T2CMETHOD IAU2000B'")
